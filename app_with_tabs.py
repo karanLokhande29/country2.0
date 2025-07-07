@@ -4,33 +4,41 @@ import zipfile
 import io
 
 st.set_page_config(page_title="Export Dashboard", layout="wide")
-st.title("📦 Unified Export Dashboard (Multi-Excel ZIP Upload)")
+st.title("📦 Multi-Format Export Dashboard (ZIP Upload)")
 
-uploaded_zip = st.file_uploader("Upload ZIP file containing Excel files", type="zip")
+uploaded_zip = st.file_uploader("Upload ZIP with Excel or CSV files", type="zip")
 
 if uploaded_zip:
     combined_data = pd.DataFrame()
 
     with zipfile.ZipFile(uploaded_zip, 'r') as z:
-        excel_files = [f for f in z.namelist() if f.endswith('.xlsx')]
-        for file in excel_files:
-            with z.open(file) as excel_file:
-                try:
-                    xls = pd.ExcelFile(excel_file, engine='openpyxl')
-                    for sheet in xls.sheet_names:
-                        df_sheet = xls.parse(sheet)
-                        df_sheet["PRODUCT"] = sheet
-                        combined_data = pd.concat([combined_data, df_sheet], ignore_index=True)
-                except Exception as e:
-                    st.warning(f"❌ Error reading {file}: {e}")
+        file_list = z.namelist()
+        for file in file_list:
+            try:
+                with z.open(file) as f:
+                    if file.endswith(".csv"):
+                        df = pd.read_csv(f)
+                    elif file.endswith(".xls"):
+                        df = pd.read_excel(f, engine="xlrd")
+                    elif file.endswith(".xlsx"):
+                        df = pd.read_excel(f, engine="openpyxl")
+                    else:
+                        st.warning(f"⚠️ Unsupported file type: {file}")
+                        continue
+
+                    df["PRODUCT"] = file.split("/")[-1].split(".")[0]  # Use filename as product name
+                    combined_data = pd.concat([combined_data, df], ignore_index=True)
+
+            except Exception as e:
+                st.warning(f"❌ Error reading {file}: {e}")
 
     if combined_data.empty:
-        st.error("No valid data was extracted from the uploaded Excel files.")
+        st.error("❌ No valid data extracted. Check file types or install required libraries.")
     else:
         df = combined_data.copy()
         df.columns = df.columns.str.strip()
 
-        # Clean & parse
+        # Clean
         df['DATE'] = pd.to_datetime(df['DATE'], errors='coerce')
         df['PRODUCT'] = df['PRODUCT'].astype(str).str.strip()
         df['QUANTITY'] = pd.to_numeric(df['QUANTITY'], errors='coerce')
@@ -111,4 +119,4 @@ if uploaded_zip:
             )
             st.dataframe(prod_export_table)
 else:
-    st.info("📁 Please upload a ZIP file containing Excel files to begin.")
+    st.info("📁 Please upload a ZIP file to begin.")
