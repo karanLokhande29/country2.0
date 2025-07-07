@@ -1,27 +1,40 @@
 import streamlit as st
 import pandas as pd
+import zipfile
+import io
 
 st.set_page_config(page_title="Export Dashboard", layout="wide")
-st.title("📦 Unified Export Dashboard")
+st.title("📦 Unified Export Dashboard (Multi-Excel Support)")
 
-uploaded_file = st.file_uploader("Upload Combined CSV Export Data", type="csv")
+uploaded_zip = st.file_uploader("Upload a ZIP file with multiple Excel files", type="zip")
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+if uploaded_zip:
+    with zipfile.ZipFile(uploaded_zip, "r") as zip_ref:
+        combined_data = pd.DataFrame()
 
-    # Clean columns and parse data
+        for file_name in zip_ref.namelist():
+            if file_name.endswith(".xlsx"):
+                with zip_ref.open(file_name) as excel_file:
+                    xls = pd.ExcelFile(excel_file)
+                    for sheet_name in xls.sheet_names:
+                        sheet_df = xls.parse(sheet_name)
+                        sheet_df["PRODUCT"] = sheet_name  # Use sheet name as product name
+                        combined_data = pd.concat([combined_data, sheet_df], ignore_index=True)
+
+    df = combined_data.copy()
+
+    # Clean and convert data
     df.columns = df.columns.str.strip()
     df['DATE'] = pd.to_datetime(df['DATE'], errors='coerce')
     df['PRODUCT'] = df['PRODUCT'].astype(str).str.strip()
     df['QUANTITY'] = pd.to_numeric(df['QUANTITY'], errors='coerce')
     df['UNIT RATE'] = pd.to_numeric(df['UNIT RATE'], errors='coerce')
     df['TOTAL USD'] = pd.to_numeric(df['TOTAL USD'], errors='coerce')
-
     df = df.dropna(subset=['PRODUCT'])
 
     # --- Sidebar Filters ---
     st.sidebar.header("🔍 Filters")
-    product_search = st.sidebar.text_input("Search Product Name (partial match)", "")
+    product_search = st.sidebar.text_input("Search Product Name", "")
     filtered_df = df[df["PRODUCT"].str.contains(product_search, case=False, na=False)]
 
     countries = filtered_df["DESTINATION"].dropna().unique()
@@ -85,7 +98,7 @@ if uploaded_file:
         st.write("### 📦 Total Quantity by Product")
         st.bar_chart(product_qty)
 
-        # Product vs Exporter Comparison Table
+        # Product vs Exporter Table
         st.write("### 🔁 Product vs Exporter Quantity Table")
         prod_export_table = filtered_df.pivot_table(
             index="PRODUCT",
@@ -97,4 +110,4 @@ if uploaded_file:
         st.dataframe(prod_export_table)
 
 else:
-    st.info("Please upload the combined export CSV file to begin.")
+    st.info("Please upload a ZIP file containing Excel files to begin.")
