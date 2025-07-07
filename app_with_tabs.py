@@ -91,16 +91,5 @@ if uploaded_file:
         st.write("### 📦 Total Quantity by Product")
         st.bar_chart(product_qty)
 
-        # Country vs Exporter Matrix (table)
-        st.write("### 🌐 Country vs Exporter Quantity Matrix")
-        matrix = filtered_df.pivot_table(
-            index="DESTINATION",
-            columns="EXPORTER",
-            values="QUANTITY",
-            aggfunc="sum",
-            fill_value=0
-        )
-        st.dataframe(matrix)
-
 else:
     st.info("Please upload the combined export CSV file to begin.")
