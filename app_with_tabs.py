@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import zipfile
 import io
+pip install streamlit pandas openpyxl xlrd
 
 st.set_page_config(page_title="Export Dashboard", layout="wide")
 st.title("📦 Multi-Format Export Dashboard (ZIP Upload)")
