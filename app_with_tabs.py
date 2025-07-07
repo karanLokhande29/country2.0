@@ -1,7 +1,5 @@
-
 import streamlit as st
 import pandas as pd
-import matplotlib as plt
 
 st.set_page_config(page_title="Export Dashboard", layout="wide")
 st.title("📦 Unified Export Dashboard")
@@ -81,14 +79,6 @@ if uploaded_file:
         exporter_qty = filtered_df.groupby("EXPORTER")["QUANTITY"].sum().sort_values(ascending=True)
         st.write("### 🏭 Total Quantity by Exporter")
         st.bar_chart(exporter_qty)
-
-        # Pie Chart: Quantity Share by Country
-        st.write("### 🥧 Quantity Share by Country (Top 10)")
-        top_countries = country_qty.sort_values(ascending=False).head(10)
-        fig, ax = plt.subplots()
-        ax.pie(top_countries, labels=top_countries.index, autopct="%1.1f%%", startangle=90)
-        ax.set_title("Quantity Distribution by Country")
-        st.pyplot(fig)
 
 else:
     st.info("Please upload the combined export CSV file to begin.")
