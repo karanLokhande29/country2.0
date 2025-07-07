@@ -80,16 +80,21 @@ if uploaded_file:
         st.write("### 🏭 Total Quantity by Exporter")
         st.bar_chart(exporter_qty)
 
-        # Monthly Quantity Trend
-        filtered_df["Month"] = filtered_df["DATE"].dt.to_period("M").astype(str)
-        monthly_qty = filtered_df.groupby("Month")["QUANTITY"].sum().sort_index()
-        st.write("### 📈 Monthly Export Quantity Trend")
-        st.line_chart(monthly_qty)
-
-        # Product-wise Quantity
+        # Quantity by Product
         product_qty = filtered_df.groupby("PRODUCT")["QUANTITY"].sum().sort_values(ascending=False)
         st.write("### 📦 Total Quantity by Product")
         st.bar_chart(product_qty)
+
+        # Product vs Exporter Comparison Table
+        st.write("### 🔁 Product vs Exporter Quantity Table")
+        prod_export_table = filtered_df.pivot_table(
+            index="PRODUCT",
+            columns="EXPORTER",
+            values="QUANTITY",
+            aggfunc="sum",
+            fill_value=0
+        )
+        st.dataframe(prod_export_table)
 
 else:
     st.info("Please upload the combined export CSV file to begin.")
