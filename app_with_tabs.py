@@ -3,7 +3,6 @@ import pandas as pd
 import zipfile
 import io
 
-
 st.set_page_config(page_title="Export Dashboard", layout="wide")
 st.title("📦 Multi-Format Export Dashboard (ZIP Upload)")
 
@@ -27,7 +26,7 @@ if uploaded_zip:
                         st.warning(f"⚠️ Unsupported file type: {file}")
                         continue
 
-                    df["PRODUCT"] = file.split("/")[-1].split(".")[0]  # Use filename as product name
+                    df["PRODUCT"] = file.split("/")[-1].split(".")[0]
                     combined_data = pd.concat([combined_data, df], ignore_index=True)
 
             except Exception as e:
@@ -76,48 +75,21 @@ if uploaded_zip:
                 filtered_df["DATE"].between(pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1]))
             ]
 
-        # Tabs
-        tab1, tab2 = st.tabs(["📋 Dashboard", "📊 Visual Charts"])
+        # 📋 Dashboard View
+        st.subheader("📊 Key Metrics")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Quantity", f"{filtered_df['QUANTITY'].sum():,.2f}")
+        with col2:
+            st.metric("Total Revenue (USD)", f"${filtered_df['TOTAL USD'].sum():,.2f}")
+        with col3:
+            st.metric("Avg. Unit Rate", f"${filtered_df['UNIT RATE'].mean():,.2f}")
 
-        with tab1:
-            st.subheader("📊 Key Metrics")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Quantity", f"{filtered_df['QUANTITY'].sum():,.2f}")
-            with col2:
-                st.metric("Total Revenue (USD)", f"${filtered_df['TOTAL USD'].sum():,.2f}")
-            with col3:
-                st.metric("Avg. Unit Rate", f"${filtered_df['UNIT RATE'].mean():,.2f}")
+        with st.expander("🔍 View Filtered Data"):
+            st.dataframe(filtered_df)
 
-            with st.expander("🔍 View Filtered Data"):
-                st.dataframe(filtered_df)
+        csv = filtered_df.to_csv(index=False).encode("utf-8")
+        st.download_button("📥 Download Filtered Data", csv, "filtered_export_data.csv", "text/csv")
 
-            csv = filtered_df.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Download Filtered Data", csv, "filtered_export_data.csv", "text/csv")
-
-        with tab2:
-            st.subheader("📊 Visual Charts")
-
-            country_qty = filtered_df.groupby("DESTINATION")["QUANTITY"].sum().sort_values(ascending=True)
-            st.write("### 📦 Total Quantity by Country")
-            st.bar_chart(country_qty)
-
-            exporter_qty = filtered_df.groupby("EXPORTER")["QUANTITY"].sum().sort_values(ascending=True)
-            st.write("### 🏭 Total Quantity by Exporter")
-            st.bar_chart(exporter_qty)
-
-            product_qty = filtered_df.groupby("PRODUCT")["QUANTITY"].sum().sort_values(ascending=False)
-            st.write("### 📦 Total Quantity by Product")
-            st.bar_chart(product_qty)
-
-            st.write("### 🔁 Product vs Exporter Quantity Table")
-            prod_export_table = filtered_df.pivot_table(
-                index="PRODUCT",
-                columns="EXPORTER",
-                values="QUANTITY",
-                aggfunc="sum",
-                fill_value=0
-            )
-            st.dataframe(prod_export_table)
 else:
     st.info("📁 Please upload a ZIP file to begin.")
