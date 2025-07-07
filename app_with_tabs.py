@@ -4,26 +4,29 @@ import zipfile
 import io
 
 st.set_page_config(page_title="Export Dashboard", layout="wide")
-st.title("📦 Unified Export Dashboard (Multi-Excel Support)")
+st.title("📦 Unified Export Dashboard (Multi-Excel ZIP Upload)")
 
-uploaded_zip = st.file_uploader("Upload a ZIP file with multiple Excel files", type="zip")
+uploaded_zip = st.file_uploader("Upload ZIP file containing Excel files", type="zip")
 
 if uploaded_zip:
-    with zipfile.ZipFile(uploaded_zip, "r") as zip_ref:
-        combined_data = pd.DataFrame()
+    combined_data = pd.DataFrame()
 
-        for file_name in zip_ref.namelist():
-            if file_name.endswith(".xlsx"):
-                with zip_ref.open(file_name) as excel_file:
+    with zipfile.ZipFile(uploaded_zip, 'r') as z:
+        excel_files = [f for f in z.namelist() if f.endswith('.xlsx')]
+        for file in excel_files:
+            with z.open(file) as excel_file:
+                try:
                     xls = pd.ExcelFile(excel_file)
-                    for sheet_name in xls.sheet_names:
-                        sheet_df = xls.parse(sheet_name)
-                        sheet_df["PRODUCT"] = sheet_name  # Use sheet name as product name
-                        combined_data = pd.concat([combined_data, sheet_df], ignore_index=True)
+                    for sheet in xls.sheet_names:
+                        df_sheet = xls.parse(sheet)
+                        df_sheet["PRODUCT"] = sheet  # Add sheet name as product name
+                        combined_data = pd.concat([combined_data, df_sheet], ignore_index=True)
+                except Exception as e:
+                    st.warning(f"Error reading {file}: {e}")
 
     df = combined_data.copy()
 
-    # Clean and convert data
+    # Standardize and clean data
     df.columns = df.columns.str.strip()
     df['DATE'] = pd.to_datetime(df['DATE'], errors='coerce')
     df['PRODUCT'] = df['PRODUCT'].astype(str).str.strip()
@@ -32,7 +35,7 @@ if uploaded_zip:
     df['TOTAL USD'] = pd.to_numeric(df['TOTAL USD'], errors='coerce')
     df = df.dropna(subset=['PRODUCT'])
 
-    # --- Sidebar Filters ---
+    # Sidebar Filters
     st.sidebar.header("🔍 Filters")
     product_search = st.sidebar.text_input("Search Product Name", "")
     filtered_df = df[df["PRODUCT"].str.contains(product_search, case=False, na=False)]
@@ -61,7 +64,7 @@ if uploaded_zip:
             filtered_df["DATE"].between(pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1]))
         ]
 
-    # --- Tabs ---
+    # Tabs
     tab1, tab2 = st.tabs(["📋 Dashboard", "📊 Visual Charts"])
 
     with tab1:
@@ -98,7 +101,7 @@ if uploaded_zip:
         st.write("### 📦 Total Quantity by Product")
         st.bar_chart(product_qty)
 
-        # Product vs Exporter Table
+        # Product vs Exporter Pivot Table
         st.write("### 🔁 Product vs Exporter Quantity Table")
         prod_export_table = filtered_df.pivot_table(
             index="PRODUCT",
@@ -110,4 +113,4 @@ if uploaded_zip:
         st.dataframe(prod_export_table)
 
 else:
-    st.info("Please upload a ZIP file containing Excel files to begin.")
+    st.info("📁 Please upload a ZIP file containing Excel files to begin.")
