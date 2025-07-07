@@ -1,9 +1,5 @@
-import plotly.express as px
-print("Plotly is working ✅")
-
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 st.set_page_config(page_title="Export Dashboard", layout="wide")
 st.title("📦 Unified Export Dashboard")
@@ -74,20 +70,37 @@ if uploaded_file:
     with tab2:
         st.subheader("📊 Visual Charts")
 
-        # Bar Chart: Quantity by Country
-        country_qty = filtered_df.groupby("DESTINATION")["QUANTITY"].sum().reset_index().sort_values("QUANTITY", ascending=False)
-        fig1 = px.bar(country_qty, x="DESTINATION", y="QUANTITY", title="📦 Total Quantity by Country")
-        st.plotly_chart(fig1)
+        # Quantity by Country
+        country_qty = filtered_df.groupby("DESTINATION")["QUANTITY"].sum().sort_values(ascending=True)
+        st.write("### 📦 Total Quantity by Country")
+        st.bar_chart(country_qty)
 
-        # Bar Chart: Quantity by Exporter
-        exporter_qty = filtered_df.groupby("EXPORTER")["QUANTITY"].sum().reset_index().sort_values("QUANTITY", ascending=False)
-        fig2 = px.bar(exporter_qty, x="EXPORTER", y="QUANTITY", title="🏭 Total Quantity by Exporter")
-        st.plotly_chart(fig2)
+        # Quantity by Exporter
+        exporter_qty = filtered_df.groupby("EXPORTER")["QUANTITY"].sum().sort_values(ascending=True)
+        st.write("### 🏭 Total Quantity by Exporter")
+        st.bar_chart(exporter_qty)
 
-        # Pie Chart: Quantity Share by Exporter
-        top_exporters = exporter_qty.nlargest(10, "QUANTITY")
-        fig3 = px.pie(top_exporters, values="QUANTITY", names="EXPORTER", title="🥧 Top 10 Exporters by Quantity")
-        st.plotly_chart(fig3)
+        # Monthly Quantity Trend
+        filtered_df["Month"] = filtered_df["DATE"].dt.to_period("M").astype(str)
+        monthly_qty = filtered_df.groupby("Month")["QUANTITY"].sum().sort_index()
+        st.write("### 📈 Monthly Export Quantity Trend")
+        st.line_chart(monthly_qty)
+
+        # Product-wise Quantity
+        product_qty = filtered_df.groupby("PRODUCT")["QUANTITY"].sum().sort_values(ascending=False)
+        st.write("### 📦 Total Quantity by Product")
+        st.bar_chart(product_qty)
+
+        # Country vs Exporter Matrix (table)
+        st.write("### 🌐 Country vs Exporter Quantity Matrix")
+        matrix = filtered_df.pivot_table(
+            index="DESTINATION",
+            columns="EXPORTER",
+            values="QUANTITY",
+            aggfunc="sum",
+            fill_value=0
+        )
+        st.dataframe(matrix)
 
 else:
     st.info("Please upload the combined export CSV file to begin.")
