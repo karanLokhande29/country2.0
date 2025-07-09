@@ -23,7 +23,8 @@ if uploaded_files:
                 st.warning(f"⚠️ Unsupported file type: {file.name}")
                 continue
 
-            df["PRODUCT"] = file.name.split(".")[0]
+            df.columns = df.columns.str.strip()  # Clean column names
+            df["SOURCE_FILE"] = file.name.split(".")[0]  # Add file name reference column
             combined_data = pd.concat([combined_data, df], ignore_index=True)
 
         except Exception as e:
@@ -43,7 +44,7 @@ if uploaded_files:
         df['TOTAL USD'] = pd.to_numeric(df['TOTAL USD'], errors='coerce')
         df = df.dropna(subset=['PRODUCT'])
 
-        # Filters
+        # Sidebar Filters
         st.sidebar.header("🔍 Filters")
         product_search = st.sidebar.text_input("Search Product Name", "")
         filtered_df = df[df["PRODUCT"].str.contains(product_search, case=False, na=False)]
@@ -82,18 +83,18 @@ if uploaded_files:
         with col3:
             st.metric("Avg. Unit Rate", f"${filtered_df['UNIT RATE'].mean():,.2f}")
 
-        # Data view
+        # View Data
         with st.expander("🔍 View Filtered Data"):
             st.dataframe(filtered_df)
 
-        # Download
+        # Download Filtered Data
         csv = filtered_df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Filtered Data", csv, "filtered_export_data.csv", "text/csv")
 
-        # Visuals
+        # Charts
         st.subheader("📊 Charts")
 
-        st.write("### 📦 Total Quantity by Country")
+        st.write("### 🌍 Total Quantity by Country")
         st.bar_chart(filtered_df.groupby("DESTINATION")["QUANTITY"].sum().sort_values())
 
         st.write("### 🏭 Total Quantity by Exporter")
